@@ -1,0 +1,34 @@
+steps -
+
+run amplify init
+- Enter a name for the project amp2
+- Enter a name for the environment amptwoenv
+- Choose your default editor: Sublime Text
+- Choose the type of app that you're building ios
+Using default provider  awscloudformation
+- Do you want to use an AWS profile? Yes
+- Please choose the profile you want to use default
+
+
+run amplify add auth
+- default
+- Email
+- Email
+
+run amplify add api
+- GraphQL
+- default
+- Amazon Cognito User Pool
+- Yes (using exist schema)
+- ./schema.graphql
+
+run amplify add analytics
+- default
+- Yes (allow guest user sending analytical events)
+
+run amplify push
+- Yes (codegen)
+- default
+- Yes (generate all)
+- default (2)
+- default (API.swift)
