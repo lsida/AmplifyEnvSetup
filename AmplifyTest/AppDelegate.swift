@@ -24,6 +24,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         
+        // init Auth
+        AWSMobileClient.sharedInstance().initialize { (userState, error) in
+            if let userState = userState {
+                print("aws mobile client initialized UserState: \(userState.rawValue)")
+            } else if let error = error {
+                print("Error initializing aws mobile client. " + error.localizedDescription)
+            }
+        }
+        
         do {
             // You can choose the directory in which AppSync stores its persistent cache databases
             let cacheConfiguration = try AWSAppSyncCacheConfiguration()
@@ -50,16 +59,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         } catch {
             print("Error initializing appsync client. \(error)")
         }
-
         
-        AWSMobileClient.sharedInstance().initialize { (userState, error) in
-            if let userState = userState {
-                print("aws mobile client initialized UserState: \(userState.rawValue)")
-            } else if let error = error {
-                print("Error initializing aws mobile client. " + error.localizedDescription)
-            }
-        }
-        
+        // init pinpoint
         let pinpointConfiguration = AWSPinpointConfiguration.defaultPinpointConfiguration(launchOptions: launchOptions)
         pinpoint = AWSPinpoint(configuration: pinpointConfiguration)
         
@@ -90,20 +91,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
     }
     
-//    func application(
-//        _ application: UIApplication,
-//        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-//
+    func application(
+        _ application: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+
 //        pinpoint!.notificationManager.interceptDidRegisterForRemoteNotifications(
 //            withDeviceToken: deviceToken)
-//    }
-//
-//    func application(
-//        _ application: UIApplication,
-//        didReceiveRemoteNotification userInfo: [AnyHashable: Any],
-//        fetchCompletionHandler completionHandler:
-//        @escaping (UIBackgroundFetchResult) -> Void) {
-//
+    }
+
+    func application(
+        _ application: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+        fetchCompletionHandler completionHandler:
+        @escaping (UIBackgroundFetchResult) -> Void) {
+
 //        pinpoint!.notificationManager.interceptDidReceiveRemoteNotification(
 //            userInfo, fetchCompletionHandler: completionHandler)
 //
@@ -116,7 +117,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
 //            UIApplication.shared.keyWindow?.rootViewController?.present(
 //                alert, animated: true, completion:nil)
 //        }
-//    }
+    }
 
     // Request user to grant permissions for the app to use notifications
 //    func registerForPushNotifications() {

@@ -48,11 +48,26 @@
                                 <action selector="onTapAddItem:" destination="BYZ-38-t0r" id="OcI-hJ-YC4"/>
                             </connections>
                         </barButtonItem>
-                        <barButtonItem key="rightBarButtonItem" title="User" id="w9O-uk-AnW">
-                            <connections>
-                                <action selector="onTapUserManagement:" destination="BYZ-38-t0r" id="xnB-Sx-L1n"/>
-                            </connections>
-                        </barButtonItem>
+                        <rightBarButtonItems>
+                            <barButtonItem title="User" id="w9O-uk-AnW">
+                                <connections>
+                                    <action selector="onTapUserManagement:" destination="BYZ-38-t0r" id="xnB-Sx-L1n"/>
+                                </connections>
+                            </barButtonItem>
+                            <barButtonItem style="plain" id="dpe-zc-Le3">
+                                <button key="customView" opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" id="RDU-Ih-534">
+                                    <rect key="frame" x="231.5" y="7" width="83" height="30"/>
+                                    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                    <state key="normal" title="Button"/>
+                                    <connections>
+                                        <action selector="onTapUnsub:" destination="BYZ-38-t0r" eventType="touchUpInside" id="BoO-dZ-mLe"/>
+                                    </connections>
+                                </button>
+                                <connections>
+                                    <action selector="onTapUnsub:" destination="BYZ-38-t0r" id="3UY-bO-nje"/>
+                                </connections>
+                            </barButtonItem>
+                        </rightBarButtonItems>
                     </navigationItem>
                     <connections>
                         <outlet property="buttonAddTodoItem" destination="jex-k9-0Lj" id="WOO-vu-Vgy"/>

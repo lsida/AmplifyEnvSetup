@@ -39,6 +39,7 @@ class ViewController: UIViewController {
     var pinpoint: AWSPinpoint?
     var discard: Cancellable?
 
+    // MARK: Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -51,92 +52,56 @@ class ViewController: UIViewController {
         pinpoint = appDelegate.pinpoint
         
         //test app sync here
-        subscribe()
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(3)) {
-            if (AWSMobileClient.sharedInstance().currentUserState == .signedIn) {
-                self.runQuery()
-            }
-        }
-        
-        if (AWSMobileClient.sharedInstance().currentUserState == .signedIn) {
-            self.buttonUserManagement.title = "SignOut"
-        } else {
-            self.buttonUserManagement.title = "SignIn"
-        }
-        
-        AWSMobileClient.sharedInstance().getTokens { (tokens, error) in
-            if let error = error { print(error.localizedDescription) }
-            if let tokens = tokens {
-                let email = tokens.idToken?.claims?["email"] as? String
-                
-                DispatchQueue.main.async {
-                    self.navigationItem.title = email
-                }
-            }
-        }
+//        subscribe()
         
         AWSMobileClient.sharedInstance().addUserStateListener(self) { (userState, info) in
             
-// try to reproduce problem here
-            AWSMobileClient.sharedInstance().getTokens({ (tokens, info) in
-                print(tokens?.idToken)
-                
-            })
-            
-            DispatchQueue.main.async {
-                
-                if (userState == .signedIn) {
-                    self.buttonUserManagement.title = "SignOut"
-                } else {
-                    self.buttonUserManagement.title = "SignIn"
-                }
-            }
-            
-            if (userState == .signedIn) {
-                self.navigationItem.title = ""
-                AWSMobileClient.sharedInstance().getTokens { (tokens, error) in
-                    if let error = error { print(error.localizedDescription) }
-                    if let tokens = tokens {
-                        let email = tokens.idToken?.claims?["email"] as? String
-                        
-                        DispatchQueue.main.async {
-                            self.navigationItem.title = email
-                        }
-                    }
-                }
-            } else {
-                self.navigationItem.title = ""
-            }
+            print("--- Get user state notification userState:\(userState) info:\(info)")
             
             switch (userState) {
             case .signedIn:
                 self.sendUserAuthEvent(userState: "_userauth.sign_in")
+                
+                AWSMobileClient.sharedInstance().getTokens { (tokens, error) in
+                    if let error = error {
+                        print("--- getTokens error:\(error)")
+                    }
+
+                    if let tokens = tokens {
+                        let email = tokens.idToken?.claims?["email"] as? String
+
+                        DispatchQueue.main.async {
+                            self.navigationItem.title = email
+                            
+                            self.buttonUserManagement.title = "SignOut"
+
+                            self.refreshControl.beginRefreshingManually()
+                            
+                            self.subscribe()
+                            
+                            
+                        }
+                    }
+                }
             case .signedOut:
                 self.sendUserAuthEvent(userState: "_userauth.sign_out")
+                
+                self.unsubscribe()
+                
+                DispatchQueue.main.async {
+                    self.navigationItem.title = ""
+                    self.buttonUserManagement.title = "SignIn"
+                }
             default:
                 break
             }
         }
+        
+        userSignOut()
+        
     }
     
-    func subscribe() {
-        do {
-            discard = try appSyncClient?.subscribe(subscription: OnChangeTodoSubscription(), resultHandler: { (result, transaction, error) in
-                if let result = result {
-                    print("in create sub callback " + result.data!.onChangeTodo!.name + " " + result.data!.onChangeTodo!.description!)
-                    
-                    self.runQuery()
-                } else if let error = error {
-                    print(error.localizedDescription)
-                }
-            })
-        } catch {
-            print("Error starting subscription.")
-        }
-    }
-    
-    
+    // MARK: IBActions
     @IBAction func onTapAddItem(_ sender: Any) {
         //TODO: check user state
         
@@ -180,8 +145,17 @@ class ViewController: UIViewController {
         if (AWSMobileClient.sharedInstance().currentUserState == .signedIn) {
             userSignOut()
         } else {
-            showDropInAuthUI()
+            // TODO: toggle between drop-in Auth UI and programatically sign in
+//            showDropInAuthUI()
+            signIn()
         }
+    }
+    
+    
+    @IBAction func onTapUnsub(_ sender: Any) {
+        
+        self.unsubscribe()
+        
     }
     
     func showDropInAuthUI() {
@@ -198,6 +172,51 @@ class ViewController: UIViewController {
             if let error = error {
                 print("sign out error " + error.localizedDescription)
             }
+        }
+    }
+    
+    // sign in user programatically
+    func signIn(user: String = "lsida@amazon.com", password: String = "123223") {
+        AWSMobileClient.sharedInstance().signIn(username: user, password: password) { (signInResult, error) in
+            if let error = error  {
+                print("in signIn(), error:\(error)")
+            } else if let signInResult = signInResult {
+                print("in signIn(), signInResult:\(signInResult)")
+                
+                switch (signInResult.signInState) {
+                case .signedIn:
+                    print("User with username \(user) is signed in.")
+                case .smsMFA:
+                    print("SMS message sent to \(signInResult.codeDetails!.destination!)")
+                default:
+                    print("Sign In needs info which is not et supported.")
+                }
+            }
+        }
+    }
+    
+    // MARK: AppSync
+    
+    func subscribe() {
+        do {
+            discard = try appSyncClient?.subscribe(subscription: OnChangeTodoSubscription(), resultHandler: { (result, transaction, error) in
+                if let result = result {
+                    print("in create sub callback " + result.data!.onChangeTodo!.name + " " + result.data!.onChangeTodo!.description!)
+                    
+                    self.runQuery()
+                } else if let error = error {
+                    print("in create sub callback, error:\(error.localizedDescription)")
+                }
+            })
+        } catch {
+            print("Error starting subscription.")
+        }
+    }
+    
+    func unsubscribe() {
+        if let discard = discard {
+            discard.cancel()
+            print("unsubsribe from AppSync")
         }
     }
     
@@ -258,6 +277,9 @@ class ViewController: UIViewController {
             }
         }
     }
+    
+    
+    // MARK: Pinpoint Analytics
     
 //    func logScreenEvent(name screenName: String) {
 //        if let analyticsClient = pinpoint?.analyticsClient {
@@ -328,4 +350,16 @@ extension ViewController: UITableViewDelegate {
             break
         }
     }
+}
+
+extension UIRefreshControl {
+    
+    func beginRefreshingManually() {
+        if let scrollView = superview as? UIScrollView {
+            scrollView.setContentOffset(CGPoint(x: 0, y: scrollView.contentOffset.y - frame.height), animated: false)
+        }
+        beginRefreshing()
+        sendActions(for: .valueChanged)
+    }
+    
 }
